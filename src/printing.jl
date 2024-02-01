@@ -69,7 +69,7 @@ function pretty_print(mtdev::MTDev)
     ord = orders(mtdev)
     ndimensions = ndims(mtdev)
     str = stringify(mtdev.dev[1])
-    for tp in collect(Iterators.product(axes(mtdev.dev)...))[2:end]
+    for tp in get_coeffs(mtdev)[2:end]
         val = mtdev.dev[tp...]
         if val != 0
             if hasmethod(isless, (type, Int)) && val < 0

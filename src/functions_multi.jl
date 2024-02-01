@@ -14,20 +14,35 @@ function Base.one(mtdev::MTDev)
 end
 Base.one(::Type{MTDev}) = MTDev([1.])
 
-#=
-epsilon(order::Int=2) = MTDev([1*(i==2) for i in 1:(order+1)])
-epsilon(t::Type, order::Int=2) = MTDev([(i==2 ? one(t) : zero(t)) for i in 1:(order+1)])
 
-function to_tdev(nb::Number, ord::Int)
-    t = MTDev([(i==1 ? nb : zero(nb)) for i in 1:(ord+1)])#TDev(typeof(nb), ord)
-    #t.dev[1] = nb
-    return t
+function epsilon(t::Type, orders::Tuple)
+    res = MTDev(t, orders)
+    ndimensions = ndims(res)
+    for i in 1:ndimensions
+        res.dev[(i == d ? 2 : 1 for d in 1:ndimensions)...] = 1
+    end
+    return res
 end
 
-function compute(tdev::MTDev, eps::Number)
-    res = zero(eltype(tdev))
-    for i in eachindex(tdev.dev)
-        res += tdev.dev[i] * eps^(i-1)
+epsilon(orders::Tuple) = epsilon(Float64, orders)
+epsilon(ndimensions::Int, orders::Int=1) = epsilon(
+    Tuple(orders for _ in 1:ndimensions))
+epsilon(t::Type, ndimensions::Int, orders::Int=1) = epsilon(t,
+    Tuple(orders for _ in 1:ndimensions))
+
+
+function to_tdev(nb::Number, orders::Tuple)
+    res = MTDev(typeof(nb), orders)
+    res.dev[1] = nb
+    return res
+end
+
+#=
+
+function compute(mtdev::MTDev, eps::Vector)
+    res = zero(eltype(mtdev))
+    for i in get_coeffs(mtdev.dev)
+        res += mtdev.dev[i] * eps^(i-1)
     end
     return res
 end
