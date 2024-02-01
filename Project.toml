@@ -3,6 +3,9 @@ uuid = "911e41e3-ee0b-4f9a-9ab7-3a6bcaf6fbd2"
 authors = ["Alseïdon"]
 version = "1.0.0-DEV"
 
+[deps]
+StaticArrays = "90137ffa-7385-5640-81b9-e52037218182"
+
 [compat]
 julia = "1"
 
