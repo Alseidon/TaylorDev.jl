@@ -1,17 +1,15 @@
 using .MTDevCore
 
 
-order(mtdev::MTDev) = size(mtdev.dev)[2] .- 1
-Base.ndims(mtdev::MTDev) = size(mtdev.dev)[1]
+orders(mtdev::MTDev) = size(mtdev.dev) .- 1
+Base.ndims(mtdev::MTDev) = ndims(mtdev.dev)
 Base.copy(mtdev::MTDev) = MTDev(mtdev.dev)
 Base.eltype(mtdev::MTDev) = eltype(mtdev.dev)
-Base.zero(mtdev::MTDev) = MTDev(eltype(mtdev), ndims(mtdev), order(mtdev))
+Base.zero(mtdev::MTDev) = MTDev(eltype(mtdev), orders(mtdev))
 Base.zero(::Type{MTDev}) = MTDev([0.])
 function Base.one(mtdev::MTDev)
     res = zero(mtdev)
-    for i in 1:ndims(mtdev)
-        res.dev[i, 1] = one(eltype(res))
-    end
+    res.dev[1] = one(eltype(mtdev))
     return res
 end
 Base.one(::Type{MTDev}) = MTDev([1.])
