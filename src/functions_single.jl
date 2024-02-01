@@ -12,8 +12,8 @@ function Base.one(tdev::TDev)
 end
 Base.one(::Type{TDev}) = TDev([1.])
 
-epsilon(order::Int=2) = TDev([1*(i==2) for i in 1:(order+1)])
-epsilon(t::Type, order::Int=2) = TDev([(i==2 ? one(t) : zero(t)) for i in 1:(order+1)])
+epsilon(order::Int=1) = TDev([1*(i==2) for i in 1:(order+1)])
+epsilon(t::Type, order::Int=1) = TDev([(i==2 ? one(t) : zero(t)) for i in 1:(order+1)])
 
 function to_tdev(nb::Number, ord::Int)
     t = TDev([(i==1 ? nb : zero(nb)) for i in 1:(ord+1)])#TDev(typeof(nb), ord)
