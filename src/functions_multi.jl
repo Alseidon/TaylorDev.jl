@@ -1,18 +1,22 @@
 using .MTDevCore
 
-#=
-order(tdev::MTDev) = length(tdev.dev) - 1
-Base.copy(tdev::MTDev) = MTDev(tdev.dev)
-Base.eltype(tdev::MTDev) = eltype(tdev.dev)
-Base.zero(tdev::MTDev) = MTDev(eltype(tdev), order(tdev))
+
+order(mtdev::MTDev) = size(mtdev.dev)[2] .- 1
+Base.ndims(mtdev::MTDev) = size(mtdev.dev)[1]
+Base.copy(mtdev::MTDev) = MTDev(mtdev.dev)
+Base.eltype(mtdev::MTDev) = eltype(mtdev.dev)
+Base.zero(mtdev::MTDev) = MTDev(eltype(mtdev), ndims(mtdev), order(mtdev))
 Base.zero(::Type{MTDev}) = MTDev([0.])
-function Base.one(tdev::MTDev)
-    res = zero(tdev)
-    res.dev[1] = one(eltype(res))
+function Base.one(mtdev::MTDev)
+    res = zero(mtdev)
+    for i in 1:ndims(mtdev)
+        res.dev[i, 1] = one(eltype(res))
+    end
     return res
 end
 Base.one(::Type{MTDev}) = MTDev([1.])
 
+#=
 epsilon(order::Int=2) = MTDev([1*(i==2) for i in 1:(order+1)])
 epsilon(t::Type, order::Int=2) = MTDev([(i==2 ? one(t) : zero(t)) for i in 1:(order+1)])
 

@@ -1,6 +1,6 @@
 #include("core.jl")
 
-using .TDevCore
+using .TDevCore, .MTDevCore
 
 const subscript_digits = [c for c in "₀₁₂₃₄₅₆₇₈₉"]
 
@@ -64,6 +64,29 @@ function pretty_print(tdev::TDev)
     return str
 end
 
-function Base.show(io::IO, a::TDev)
+function pretty_print(mtdev::MTDev)
+    type = eltype(mtdev)
+    ord = order(mtdev)
+    ndimensions = ndims(mtdev)
+    str = "$ndimensions-dimensional Taylor development:"
+    for dim in 1:ndimensions
+        str *= "\n " * stringify(mtdev.dev[dim, 1])
+        for i in 1:ord
+            val = mtdev.dev[dim, i+1]
+            if val != 0
+                if hasmethod(isless, (type, Int)) && val < 0
+                    str *= " - " *
+                           stringify(-val) * "ε" * superscriptify(i)
+                else
+                    str *= " + " * stringify(val) * "ε" * superscriptify(i)
+                end
+            end
+        end
+        str *= " + 𝒪(ε" * superscriptify(ord + 1) * ")"
+    end
+    return str
+end
+
+function Base.show(io::IO, a::T) where T <: Union{TDev, MTDev}
     return print(io, pretty_print(a))
 end
