@@ -15,6 +15,6 @@ MTDev(orders::Tuple) = MTDev(zeros(orders .+ 1))
 MTDev(t::DataType, orders::Tuple) = MTDev(zeros(t, orders .+ 1))
 
 
-get_coeffs(mtdev::MTDev) = Iterators.product(axes(mtdev.dev)...)
+get_coeffs(mtdev::MTDev) = collect(Iterators.product(axes(mtdev.dev)...))
 
 end
