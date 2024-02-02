@@ -15,7 +15,7 @@ end
 Base.one(::Type{MTDev}) = MTDev([1.])
 
 
-function epsilon(t::Type, orders::Tuple)
+function epsilons(t::Type, orders::Tuple)
     res = MTDev(t, orders)
     ndimensions = ndims(res)
     for i in 1:ndimensions
@@ -24,10 +24,10 @@ function epsilon(t::Type, orders::Tuple)
     return res
 end
 
-epsilon(orders::Tuple) = epsilon(Float64, orders)
-epsilon(ndimensions::Int, orders::Int=1) = epsilon(
+epsilons(orders::Tuple) = epsilons(Float64, orders)
+epsilons(ndimensions::Int, orders::Int=1) = epsilons(
     Tuple(orders for _ in 1:ndimensions))
-epsilon(t::Type, ndimensions::Int, orders::Int=1) = epsilon(t,
+epsilons(t::Type, ndimensions::Int, orders::Int=1) = epsilons(t,
     Tuple(orders for _ in 1:ndimensions))
 
 

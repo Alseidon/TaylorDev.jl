@@ -1,6 +1,6 @@
 module TaylorDev
 export TDev, my_const, order, to_tdev, compute, deriv, epsilon
-export MTDev
+export MTDev, epsilons, get_coeffs  
 export taylor_method
 
 include("core.jl")
