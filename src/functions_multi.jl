@@ -31,7 +31,7 @@ epsilons(t::Type, ndimensions::Int, orders::Int=1) = epsilons(t,
     Tuple(orders for _ in 1:ndimensions))
 
 
-function to_tdev(nb::Number, orders::Tuple)
+function to_mtdev(nb::Number, orders::Tuple)
     res = MTDev(typeof(nb), orders)
     res.dev[1] = nb
     return res
@@ -96,6 +96,7 @@ function Base.:/(a::MTDev, b::MTDev)
     end
     return res
 end
+=#
 
 # INTERACTION WITH NUMBERS
 Base.:(==)(nb::Number, b::MTDev) = false
@@ -106,15 +107,15 @@ Base.isless(nb::Number, a::MTDev) = nb < a.dev[1]
 
 
 function Base.:+(nb::Number, b::MTDev)
-    return to_tdev(nb, order(b)) + b
+    return to_mtdev(nb, orders(b)) + b
 end
 Base.:+(b::MTDev, nb::Number) = nb + b
 
 function Base.:-(nb::Number, b::MTDev)
-    return to_tdev(nb, order(b)) - b
+    return to_mtdev(nb, orders(b)) - b
 end
 function Base.:-(b::MTDev, nb::Number)
-    return b - to_tdev(nb, order(b))
+    return b - to_mtdev(nb, orders(b))
 end
 
 function Base.:*(nb::Number, b::MTDev)
@@ -125,6 +126,7 @@ Base.:*(b::MTDev, nb::Number) = nb * b
 
 Base.:/(a::MTDev, nb::Number) = MTDev(a.dev ./ nb)
 
+#=
 function Base.:^(a::MTDev, nb::Integer)
     if nb == 1
         return a
