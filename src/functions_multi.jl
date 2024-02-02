@@ -58,7 +58,6 @@ function deriv(mtdev::MTDev, nvar::Int)
     return res
 end
 
-#=
 # BASE OPERATIONS
 Base.:(==)(a::MTDev, b::MTDev) = (a.dev == b.dev)
 function Base.:+(a::MTDev, b::MTDev)
@@ -74,15 +73,18 @@ function Base.:-(a::MTDev)
 end
 
 function Base.:*(a::MTDev, b::MTDev)
-    res = MTDev(eltype(a), order(a))
-    for i in eachindex(a.dev)
-        for j in 1:(order(a)-i+2)
-            res.dev[i+j-1] += a.dev[i] * b.dev[j]
+    ord = orders(a)
+    @assert ord == orders(b)
+    res = MTDev(eltype(a), ord)
+    for i in get_coeffs(res)
+        for j in collect(Iterators.product(map(c->1:c, i)...))
+            res.dev[i...] += a.dev[j...] * b.dev[(i .- j .+ 1)...]
         end
     end
     return res
 end
 
+#=
 function Base.:/(a::MTDev, b::MTDev)
     @assert b.dev[1] != 0
     res = copy(a)#TDev(eltype(a), order(a))
