@@ -37,25 +37,28 @@ function to_tdev(nb::Number, orders::Tuple)
     return res
 end
 
-#=
-
 function compute(mtdev::MTDev, eps::Vector)
     res = zero(eltype(mtdev))
-    for i in get_coeffs(mtdev.dev)
-        res += mtdev.dev[i] * eps^(i-1)
+    for i in get_coeffs(mtdev)
+        res += mtdev.dev[i...] * prod(eps .^ (i .- 1))
     end
     return res
 end
 
-function deriv(tdev::MTDev)
-    @assert order(tdev) >= 1
-    res = MTDev(eltype(tdev), order(tdev)-1)
-    for i in eachindex(res.dev)
-        res.dev[i] = tdev.dev[i+1] * i
+function deriv(mtdev::MTDev, nvar::Int)
+    ord = orders(mtdev) |> collect
+    ord[nvar] -= 1
+    @assert ord[nvar] >= 0
+    res = MTDev(eltype(mtdev), Tuple(ord))
+    for i in get_coeffs(res)
+        j = collect(i)
+        j[nvar] += 1
+        res.dev[i...] = mtdev.dev[j...] * i[nvar]
     end
     return res
 end
 
+#=
 # BASE OPERATIONS
 Base.:(==)(a::MTDev, b::MTDev) = (a.dev == b.dev)
 function Base.:+(a::MTDev, b::MTDev)
