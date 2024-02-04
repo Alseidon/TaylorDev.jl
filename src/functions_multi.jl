@@ -147,3 +147,16 @@ function add!(target::MTDev, b::MTDev)
     return
 end
 =#
+
+# INTEG UTILS
+function identity_jet(v::Vector, ord::Int=1)
+    ndimensions = length(v)
+    res = zeros(MTDev, ndimensions)
+    ords = Tuple(ord for i in 1:ndimensions)
+    for i in 1:ndimensions
+        res[i] = v[i] + MTDev(eltype(v), ords)
+        j = [dim==i ? 2 : 1 for dim in 1:ndimensions]
+        res[i].dev[j...] = 1
+    end
+    return res
+end
