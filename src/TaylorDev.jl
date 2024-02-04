@@ -3,7 +3,7 @@ export my_const
 export TDev,  order,  to_tdev,  epsilon              # TDev
 export MTDev, orders, to_mtdev, epsilons, get_coeffs # MTDev 
 export compute, deriv                                # Commons
-export taylor_method
+export identity_jet, taylor_method
 
 include("core.jl")
 include("core_multi.jl")

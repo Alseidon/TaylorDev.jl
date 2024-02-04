@@ -86,11 +86,16 @@ function pretty_print(mtdev::MTDev)
         end
     end
     str *= " + 𝒪("
-    for i in 1:ndimensions
-        if i != 1
-            str *= ","
+    if all(ord .== ord[1]) && ndimensions > 2
+        str *= "ε" * subscriptify(1) * "..." * subscriptify(ndimensions)
+        str *= superscriptify(ord[1]+1)
+    else
+        for i in 1:ndimensions
+            if i != 1
+                str *= ","
+            end
+            str *= "ε" * subscriptify(i) * superscriptify(ord[i] + 1)
         end
-        str *= "ε" * subscriptify(i) * superscriptify(ord[i] + 1)
     end
     str *= ")"
     return str
