@@ -2,7 +2,7 @@ module TaylorDev
 export my_const
 export TDev,  order,  to_tdev,  epsilon              # TDev
 export MTDev, orders, to_mtdev, epsilons, get_coeffs # MTDev 
-export compute, deriv                                # Commons
+export compute, deriv, constant_term                 # Commons
 export identity_jet, taylor_method
 
 include("core.jl")

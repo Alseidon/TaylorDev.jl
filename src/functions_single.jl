@@ -15,9 +15,10 @@ Base.one(::Type{TDev}) = TDev([1.])
 epsilon(order::Int=1) = TDev([1*(i==2) for i in 1:(order+1)])
 epsilon(t::Type, order::Int=1) = TDev([(i==2 ? one(t) : zero(t)) for i in 1:(order+1)])
 
+constant_term(a::TDev) = a.dev[1]
+
 function to_tdev(nb::Number, ord::Int)
-    t = TDev([(i==1 ? nb : zero(nb)) for i in 1:(ord+1)])#TDev(typeof(nb), ord)
-    #t.dev[1] = nb
+    t = TDev([(i==1 ? nb : zero(nb)) for i in 1:(ord+1)])
     return t
 end
 
@@ -63,13 +64,13 @@ function Base.:*(a::TDev, b::TDev)
 end
 
 function Base.:/(a::TDev, b::TDev)
-    @assert b.dev[1] != 0
+    @assert constant_term(b) != 0
     res = copy(a)#TDev(eltype(a), order(a))
     for i in eachindex(res.dev) # k=i-1; c_k = a_k
         for j in 2:i
             res.dev[i] -= b.dev[j] * res.dev[i-j+1]
         end
-        res.dev[i] /= b.dev[1]
+        res.dev[i] /= constant_term(b)
     end
     return res
 end
@@ -78,8 +79,8 @@ end
 Base.:(==)(nb::Number, b::TDev) = false
 Base.:(==)(b::TDev, nb::Number) = false
 
-Base.isless(a::TDev, nb::Number) = a.dev[1] < nb
-Base.isless(nb::Number, a::TDev) = nb < a.dev[1]
+Base.isless(a::TDev, nb::Number) = constant_term(a) < nb
+Base.isless(nb::Number, a::TDev) = nb < constant_term(a)
 
 
 function Base.:+(nb::Number, b::TDev)
@@ -111,9 +112,22 @@ function Base.:^(a::TDev, nb::Integer)
 end
 
 # BASE FUNCTIONS
+function Base.abs(a::TDev)
+    @assert constant_term(a) != 0.
+    return TDev(map(i->(i==1 ? abs(a.dev[1]) : a.dev[i]), 1:(order(a)+1)))
+end
+
 function Base.sin(a::TDev)
 end
 
+function sin_exp(val, k)
+    x = BigFloat(val % 2π)
+    res = zero(x)
+    for i in 0:(k ÷ 2)
+        res += (-1)^i * x^(2i+1) / factorial(big(2i+1))
+    end
+    return res
+end
 
 # IN-PLACE OPERATIONS
 function add!(target::TDev, b::TDev)

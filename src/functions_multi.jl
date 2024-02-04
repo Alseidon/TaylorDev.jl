@@ -30,6 +30,8 @@ epsilons(ndimensions::Int, orders::Int=1) = epsilons(
 epsilons(t::Type, ndimensions::Int, orders::Int=1) = epsilons(t,
     Tuple(orders for _ in 1:ndimensions))
 
+constant_term(a::MTDev) = a.dev[1]
+
 
 function to_mtdev(nb::Number, orders::Tuple)
     res = MTDev(typeof(nb), orders)
@@ -102,8 +104,8 @@ end
 Base.:(==)(nb::Number, b::MTDev) = false
 Base.:(==)(b::MTDev, nb::Number) = false
 
-Base.isless(a::MTDev, nb::Number) = a.dev[1] < nb
-Base.isless(nb::Number, a::MTDev) = nb < a.dev[1]
+Base.isless(a::MTDev, nb::Number) = constant_term(a) < nb
+Base.isless(nb::Number, a::MTDev) = nb < constant_term(a)
 
 
 function Base.:+(nb::Number, b::MTDev)
