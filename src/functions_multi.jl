@@ -140,7 +140,7 @@ Base.:*(b::MTDev, nb::Number) = nb * b
 
 Base.:/(a::MTDev, nb::Number) = MTDev(a.dev ./ nb)
 
-Base.:/(nb::Number, a::TDev) = to_mtdev(nb, orders(a)) / a
+Base.:/(nb::Number, a::MTDev) = to_mtdev(nb, orders(a)) / a
 
 #=
 function Base.:^(a::MTDev, nb::Integer)
