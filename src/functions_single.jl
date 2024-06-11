@@ -122,6 +122,8 @@ Base.:*(b::TDev, nb::Number) = nb * b
 
 Base.:/(a::TDev, nb::Number) = TDev(a.dev ./ nb)
 
+Base.:/(nb::Number, a::TDev) = to_tdev(nb, order(a)) / a
+
 #= function Base.:^(a::TDev, nb::Integer)
     if nb == 1
         return a
