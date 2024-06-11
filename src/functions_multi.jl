@@ -1,5 +1,6 @@
 using .MTDevCore
 
+using StaticArrays: Size
 
 orders(mtdev::MTDev) = size(mtdev.dev) .- 1
 Base.ndims(mtdev::MTDev) = ndims(mtdev.dev)
@@ -29,6 +30,19 @@ epsilons(ndimensions::Int, orders::Int=1) = epsilons(
     Tuple(orders for _ in 1:ndimensions))
 epsilons(t::Type, ndimensions::Int, orders::Int=1) = epsilons(t,
     Tuple(orders for _ in 1:ndimensions))
+
+function _lowest_nonzero_order_i(mt::MTDev, i::Int)
+    for ord in 0:orders(mt)[i]
+        if any(mt.dev[[k == i ? ord+1 : (:) for k  in 1:ndims(mt)]...] .!= 0)
+            return ord
+        end
+    end
+    return order(mt) + 1
+end
+
+lowest_nonzero_orders(mt::MTDev) = map(
+    i->_lowest_nonzero_order_i(mt, i),
+    1:ndims(mt))
 
 constant_term(a::MTDev) = a.dev[1]
 
@@ -62,12 +76,15 @@ end
 
 # BASE OPERATIONS
 Base.:(==)(a::MTDev, b::MTDev) = (a.dev == b.dev)
-function Base.:+(a::MTDev, b::MTDev)
-    return MTDev(a.dev + b.dev)
+
+function Base.:+(a::MTDev{Ns}, b::MTDev{Ms}) where {Ns, Ms}
+    idx = map((i, j)->1:min(i,j), Tuple(Size(Ns)), Tuple(Size(Ms)))
+    return MTDev(a.dev[idx...] + b.dev[idx...])
 end
 
-function Base.:-(a::MTDev, b::MTDev)
-    return MTDev(a.dev - b.dev)
+function Base.:-(a::MTDev{Ns}, b::MTDev{Ms}) where {Ns, Ms}
+    idx = map((i, j)->1:min(i,j), Tuple(Size(Ns)), Tuple(Size(Ms)))
+    return MTDev(a.dev[idx...] - b.dev[idx...])
 end
 
 function Base.:-(a::MTDev)
@@ -75,6 +92,7 @@ function Base.:-(a::MTDev)
 end
 
 function Base.:*(a::MTDev, b::MTDev)
+    # TODO different orders
     ord = orders(a)
     @assert ord == orders(b)
     res = MTDev(eltype(a), ord)
@@ -86,19 +104,13 @@ function Base.:*(a::MTDev, b::MTDev)
     return res
 end
 
-#=
+
 function Base.:/(a::MTDev, b::MTDev)
+    # TODO
     @assert b.dev[1] != 0
-    res = copy(a)#TDev(eltype(a), order(a))
-    for i in eachindex(res.dev) # k=i-1; c_k = a_k
-        for j in 2:i
-            res.dev[i] -= b.dev[j] * res.dev[i-j+1]
-        end
-        res.dev[i] /= b.dev[1]
-    end
-    return res
+    @error "Not implemented"
 end
-=#
+
 
 # INTERACTION WITH NUMBERS
 Base.:(==)(nb::Number, b::MTDev) = false
@@ -127,6 +139,8 @@ end
 Base.:*(b::MTDev, nb::Number) = nb * b
 
 Base.:/(a::MTDev, nb::Number) = MTDev(a.dev ./ nb)
+
+Base.:/(nb::Number, a::TDev) = to_mtdev(nb, orders(a)) / a
 
 #=
 function Base.:^(a::MTDev, nb::Integer)
