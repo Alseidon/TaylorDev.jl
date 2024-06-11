@@ -1,19 +1,30 @@
 using .TDevCore
 
-order(tdev::TDev) = length(tdev.dev) - 1
+order(tdev::TDev{N}) where {N} = N - 1 #length(tdev.dev) - 1
 Base.copy(tdev::TDev) = TDev(tdev.dev)
 Base.eltype(tdev::TDev) = eltype(tdev.dev)
 Base.zero(tdev::TDev) = TDev(eltype(tdev), order(tdev))
-Base.zero(::Type{TDev}) = TDev([0.])
+Base.zero(::Type{TDev{N, T}}) where {N, T} = TDev(T, N-1)
 function Base.one(tdev::TDev)
     res = zero(tdev)
     res.dev[1] = one(eltype(res))
     return res
 end
-Base.one(::Type{TDev}) = TDev([1.])
+Base.one(::Type{TDev{N, T}}) where {N, T} = TDev([
+    i == 1 ? one(T) : zero(0) for i in 1:N
+])
 
 epsilon(order::Int=1) = TDev([1*(i==2) for i in 1:(order+1)])
 epsilon(t::Type, order::Int=1) = TDev([(i==2 ? one(t) : zero(t)) for i in 1:(order+1)])
+
+function lowest_nonzero_order(t::TDev)
+    for i in eachindex(t.dev)
+        if t.dev[i] != 0
+            return i-1
+        end
+    end
+    return order(t) + 1
+end
 
 constant_term(a::TDev) = a.dev[1]
 
@@ -41,12 +52,13 @@ end
 
 # BASE OPERATIONS
 Base.:(==)(a::TDev, b::TDev) = (a.dev == b.dev)
-function Base.:+(a::TDev, b::TDev)
-    return TDev(a.dev + b.dev)
+
+function Base.:+(a::TDev{N, T}, b::TDev{M, U}) where {N, T, M, U}
+    return TDev( a.dev[1:min(N, M)] + b.dev[1:min(N, M)] )
 end
 
-function Base.:-(a::TDev, b::TDev)
-    return TDev(a.dev - b.dev)
+function Base.:-(a::TDev{N, T}, b::TDev{M, U}) where {N, T, M, U}
+    return TDev( a.dev[1:min(N, M)] - b.dev[1:min(N, M)] )
 end
 
 function Base.:-(a::TDev)
@@ -54,10 +66,17 @@ function Base.:-(a::TDev)
 end
 
 function Base.:*(a::TDev, b::TDev)
-    res = TDev(eltype(a), order(a))
-    for i in eachindex(a.dev)
-        for j in 1:(order(a)-i+2)
-            res.dev[i+j-1] += a.dev[i] * b.dev[j]
+    mina = lowest_nonzero_order(a)
+    minb = lowest_nonzero_order(b)
+    ord1 = order(a) + minb
+    ord2 = order(b) + mina
+    if ord2 < ord1
+        return b*a
+    end
+    res = TDev(promote_type(eltype(a), eltype(b)), ord1)
+    for o in (mina+minb):ord1#(mina+1):length(a.dev)
+        for i in max(mina, o-order(b)):min(order(a), o-minb)#(minb+1):(order(b)-i+2)
+            res.dev[o+1] += a.dev[i+1] * b.dev[o-i+1]
         end
     end
     return res
@@ -103,13 +122,13 @@ Base.:*(b::TDev, nb::Number) = nb * b
 
 Base.:/(a::TDev, nb::Number) = TDev(a.dev ./ nb)
 
-function Base.:^(a::TDev, nb::Integer)
+#= function Base.:^(a::TDev, nb::Integer)
     if nb == 1
         return a
     elseif nb == 0
         return TDev(eltype(a), order(a))
     end
-end
+end =#
 
 # BASE FUNCTIONS
 function Base.abs(a::TDev)
@@ -117,7 +136,56 @@ function Base.abs(a::TDev)
     return TDev(map(i->(i==1 ? abs(a.dev[1]) : a.dev[i]), 1:(order(a)+1)))
 end
 
+function Base.promote_rule(nb::Number, a::TDev)
+    return (to_tdev(nb, order(a)), a)
+end
+
 function Base.sin(a::TDev)
+    res = to_tdev(sin(constant_term(a)), order(a))
+
+    remain = copy(a)
+    remain.dev[1] = zero(eltype(remain))
+    remain_i = copy(remain)
+    vals = [sin(constant_term(a)), cos(constant_term(a)),
+            -sin(constant_term(a)), -cos(constant_term(a)),]
+
+    for i in 1:(order(a))
+        res += vals[i%4 + 1] * remain_i / factorial(i)
+        remain_i *= remain
+    end
+    return res
+end
+
+function Base.cos(a::TDev)
+    res = to_tdev(cos(constant_term(a)), order(a))
+
+    remain = copy(a)
+    remain.dev[1] = zero(eltype(remain))
+    remain_i = copy(remain)
+    vals = [cos(constant_term(a)), -sin(constant_term(a)),
+            -cos(constant_term(a)), sin(constant_term(a)),]
+
+    for i in 1:(order(a))
+        res += vals[i%4 + 1] * remain_i / factorial(i)
+        remain_i *= remain
+    end
+    return res
+end
+
+function Base.sqrt(a::TDev)
+    res = to_tdev(sqrt(constant_term(a)), order(a))
+
+    remain = copy(a)
+    remain.dev[1] = zero(eltype(remain))
+    remain_i = copy(remain)
+    val = .5/sqrt(constant_term(a))
+
+    for i in 1:(order(a))
+        res += val * remain_i / factorial(i)
+        val *= -(2*(i-1)+1)/2 / constant_term(a)
+        remain_i *= remain
+    end
+    return res
 end
 
 function sin_exp(val, k)
