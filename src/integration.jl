@@ -77,3 +77,18 @@ function taylor_method(f::Function, initial_pt::AbstractVector,
     @error "couldn't finish" pt t
     @assert false
 end
+
+function taylor_method(f::Function, initial_pt::AbstractVector,
+    times::AbstractVector;
+    err::Number=1e-16, ord::Int=15, max_steps::Int=100)
+    res = zeros(eltype(initial_pt), (length(times), length(initial_pt)))
+    previous_t = zero(eltype(times))
+    previous_pt = copy(initial_pt)
+    for i in eachindex(times)
+        res[i,:] = taylor_method(f, previous_pt, previous_t, times[i];
+                err=err, ord=ord, max_steps=max_steps)
+        previous_pt[:] = res[i,:]
+        previous_t = times[i]
+    end
+    return res
+end

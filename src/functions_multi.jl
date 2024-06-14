@@ -17,8 +17,8 @@ Base.one(::Type{MTDev}) = MTDev([1.])
 
 
 function epsilons(t::Type, orders::Tuple)
-    res = MTDev(t, orders)
-    ndimensions = ndims(res)
+    res = MTDev{Tuple{(orders.+1)...}, t}()
+    ndimensions::Int = ndims(res)
     for i in 1:ndimensions
         res.dev[(i == d ? 2 : 1 for d in 1:ndimensions)...] = 1
     end
@@ -91,24 +91,57 @@ function Base.:-(a::MTDev)
     return MTDev(-a.dev)
 end
 
-function Base.:*(a::MTDev, b::MTDev)
-    # TODO different orders
-    ord = orders(a)
-    @assert ord == orders(b)
-    res = MTDev(eltype(a), ord)
-    for i in get_coeffs(res)
-        for j in collect(Iterators.product(map(c->1:c, i)...))
-            res.dev[i...] += a.dev[j...] * b.dev[(i .- j .+ 1)...]
+function Base.:*(a::MTDev{Sa, Ta}, b::MTDev{Sb, Tb}) where {Sa, Ta, Sb, Tb}
+    # TODO optimize for null first orders?
+    @assert ndims(a) == ndims(b)
+    ord = map(min, orders(a), orders(b))
+    res = MTDev(promote_type(Ta, Tb), ord)
+    for o in get_coeffs(res)
+        for i in collect(Iterators.product(map(c->1:c, o)...))
+            res.dev[o...] += a.dev[i...] * b.dev[(o .- i .+ 1)...]
         end
     end
     return res
 end
 
 
-function Base.:/(a::MTDev, b::MTDev)
+function Base.:/(a::MTDev{N}, b::MTDev{M}) where {N, M}
     # TODO
-    @assert b.dev[1] != 0
-    @error "Not implemented"
+    @assert constant_term(b) != 0
+    res = MTDev(
+        promote_type(eltype(a), eltype(b)),
+        Tuple(map(min, Tuple(Size(N)).-1, Tuple(Size(M)).-1))
+    )
+    for ord in get_coeffs(res)
+        res.dev[ord...] = a.dev[ord...]
+        for is in Iterators.product(map(o->1:o, ord)...)
+            if all(is.==1)
+                continue
+            end
+            res.dev[ord...] -= b.dev[is...] * res.dev[(ord .- is .+ 1)...]
+            # TODO
+        end
+        res.dev[ord...] /= constant_term(b)
+    end
+    return res
+end
+
+function Base.:/(a::MTDev{N}, b::MTDev{N}) where {N}
+    # TODO
+    @assert constant_term(b) != 0
+    res = MTDev{N, promote_type(eltype(a), eltype(b))}()
+    for ord in get_coeffs(res)
+        res.dev[ord...] = a.dev[ord...]
+        for is in Iterators.product(map(o->1:o, ord)...)
+            if all(is.==1)
+                continue
+            end
+            res.dev[ord...] -= b.dev[is...] * res.dev[(ord .- is .+ 1)...]
+            # TODO
+        end
+        res.dev[ord...] /= constant_term(b)
+    end
+    return res
 end
 
 
@@ -150,12 +183,59 @@ function Base.:^(a::MTDev, nb::Integer)
         return MTDev(eltype(a), order(a))
     end
 end
+=#
 
 # BASE FUNCTIONS
 function Base.sin(a::MTDev)
+    res = to_mtdev(sin(constant_term(a)), orders(a))
+
+    remain = copy(a)
+    remain.dev[1] = zero(eltype(remain))
+    remain_i = copy(remain)
+    vals = [sin(constant_term(a)), cos(constant_term(a)),
+            -sin(constant_term(a)), -cos(constant_term(a)),]
+
+    for i in 1:(max(orders(a)...))
+        res += vals[i%4 + 1] * remain_i / factorial(i)
+        remain_i *= remain
+    end
+    return res
+end
+
+function Base.cos(a::MTDev)
+    res = to_mtdev(cos(constant_term(a)), orders(a))
+
+    remain = copy(a)
+    remain.dev[1] = zero(eltype(remain))
+    remain_i = copy(remain)
+    vals = [cos(constant_term(a)), -sin(constant_term(a)),
+            -cos(constant_term(a)), sin(constant_term(a)),]
+
+    for i in 1:(max(orders(a)...))
+        res += vals[i%4 + 1] * remain_i / factorial(i)
+        remain_i *= remain
+    end
+    return res
+end
+
+function Base.sqrt(a::MTDev)
+    res = to_mtdev(sqrt(constant_term(a)), orders(a))
+
+    remain = copy(a)
+    remain.dev[1] = zero(eltype(remain))
+    remain_i = copy(remain)
+    val = .5/sqrt(constant_term(a))
+
+    for i in 1:(max(orders(a)...))
+        res += val * remain_i / factorial(i)
+        val *= -(2*(i-1)+1)/2 / constant_term(a)
+        remain_i *= remain
+    end
+    return res
 end
 
 
+#=
 # IN-PLACE OPERATIONS
 function add!(target::MTDev, b::MTDev)
     #@assert order(target) == order(b)

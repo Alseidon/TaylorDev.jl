@@ -9,12 +9,22 @@ struct MTDev{S, T, N, L} <: Number
         new{Tuple{size(v)...}, eltype(v), ndims(v), prod(size(v))}(
             MArray{Tuple{size(v)...}, eltype(v)}(v)
         ))
+    MTDev{S, T}() where {S, T} = (
+        sizer = Size(S); new{S, T, length(sizer), prod(sizer)}(
+            MArray{S, T}(zeros(T, Tuple(sizer)))
+        )
+    ) # use this better
 end
 
 MTDev(orders::Tuple) = MTDev(zeros(orders .+ 1))
 MTDev(t::DataType, orders::Tuple) = MTDev(zeros(t, orders .+ 1))
 
 
-get_coeffs(mtdev::MTDev) = collect(Iterators.product(axes(mtdev.dev)...))
+get_coeffs(mtdev::MTDev{N}) where {N} = collect(Iterators.product(axes(mtdev.dev)...)) :: MArray{N}
+#= 
+lower_order(mtdev::MTDev{N}, ::Type{M}) where {N, M} = MTDev(
+    mtdev.dev[:]
+)
+=#
 
 end

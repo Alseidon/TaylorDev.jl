@@ -84,8 +84,12 @@ end
 
 function Base.:/(a::TDev, b::TDev)
     @assert constant_term(b) != 0
-    res = copy(a)#TDev(eltype(a), order(a))
+    res = TDev(
+        promote_type(eltype(a), eltype(b)),
+        min(order(a), order(b))
+    )
     for i in eachindex(res.dev) # k=i-1; c_k = a_k
+        res.dev[i] = a.dev[i]
         for j in 2:i
             res.dev[i] -= b.dev[j] * res.dev[i-j+1]
         end
