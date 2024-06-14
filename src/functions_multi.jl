@@ -46,11 +46,14 @@ lowest_nonzero_orders(mt::MTDev) = map(
 
 constant_term(a::MTDev) = a.dev[1]
 
-
-function to_mtdev(nb::Number, orders::Tuple)
-    res = MTDev(typeof(nb), orders)
+function to_mtdev(nb::Number, ::Type{T}) where T
+    res = MTDev{T, typeof(nb)}()
     res.dev[1] = nb
     return res
+end
+function to_mtdev(nb::Number, orders::Tuple)
+    # WARNING Type unstable function
+    return to_mtdev(nb, Tuple{(orders .+ 1)...})
 end
 
 function compute(mtdev::MTDev, eps::Vector)
@@ -77,25 +80,43 @@ end
 # BASE OPERATIONS
 Base.:(==)(a::MTDev, b::MTDev) = (a.dev == b.dev)
 
-function Base.:+(a::MTDev{Ns}, b::MTDev{Ms}) where {Ns, Ms}
-    idx = map((i, j)->1:min(i,j), Tuple(Size(Ns)), Tuple(Size(Ms)))
-    return MTDev(a.dev[idx...] + b.dev[idx...])
+function Base.:+(a::MTDev{N}, b::MTDev{M}) where {N, M}
+    common_N = highest_common_order(N, M)
+    return lower_order(a, common_N) + lower_order(b, common_N)
+end
+function Base.:+(a::MTDev{Ns}, b::MTDev{Ns}) where {Ns}
+    return MTDev(a.dev + b.dev)
 end
 
-function Base.:-(a::MTDev{Ns}, b::MTDev{Ms}) where {Ns, Ms}
-    idx = map((i, j)->1:min(i,j), Tuple(Size(Ns)), Tuple(Size(Ms)))
-    return MTDev(a.dev[idx...] - b.dev[idx...])
+
+function Base.:-(a::MTDev{N}, b::MTDev{M}) where {N, M}
+    common_N = highest_common_order(N, M)
+    return lower_order(a, common_N) - lower_order(b, common_N)
+end
+function Base.:-(a::MTDev{Ns}, b::MTDev{Ns}) where {Ns}
+    return MTDev(a.dev - b.dev)
 end
 
 function Base.:-(a::MTDev)
     return MTDev(-a.dev)
 end
 
-function Base.:*(a::MTDev{Sa, Ta}, b::MTDev{Sb, Tb}) where {Sa, Ta, Sb, Tb}
-    # TODO optimize for null first orders?
-    @assert ndims(a) == ndims(b)
+function Base.:*(a::MTDev{N}, b::MTDev{M}) where {N, M}
+    common_N = highest_common_order(N, M)
+    return lower_order(a, common_N) * lower_order(b, common_N)
+    #= @assert ndims(a) == ndims(b)
     ord = map(min, orders(a), orders(b))
     res = MTDev(promote_type(Ta, Tb), ord)
+    for o in get_coeffs(res)
+        for i in collect(Iterators.product(map(c->1:c, o)...))
+            res.dev[o...] += a.dev[i...] * b.dev[(o .- i .+ 1)...]
+        end
+    end
+    return res =#
+end
+function Base.:*(a::MTDev{N, Ta}, b::MTDev{N, Tb}) where {N, Ta, Tb}
+    @assert ndims(a) == ndims(b)
+    res = MTDev{N, promote_type(Ta, Tb)}()
     for o in get_coeffs(res)
         for i in collect(Iterators.product(map(c->1:c, o)...))
             res.dev[o...] += a.dev[i...] * b.dev[(o .- i .+ 1)...]
@@ -105,29 +126,13 @@ function Base.:*(a::MTDev{Sa, Ta}, b::MTDev{Sb, Tb}) where {Sa, Ta, Sb, Tb}
 end
 
 
+
 function Base.:/(a::MTDev{N}, b::MTDev{M}) where {N, M}
-    # TODO
-    @assert constant_term(b) != 0
-    res = MTDev(
-        promote_type(eltype(a), eltype(b)),
-        Tuple(map(min, Tuple(Size(N)).-1, Tuple(Size(M)).-1))
-    )
-    for ord in get_coeffs(res)
-        res.dev[ord...] = a.dev[ord...]
-        for is in Iterators.product(map(o->1:o, ord)...)
-            if all(is.==1)
-                continue
-            end
-            res.dev[ord...] -= b.dev[is...] * res.dev[(ord .- is .+ 1)...]
-            # TODO
-        end
-        res.dev[ord...] /= constant_term(b)
-    end
-    return res
+    common_N = highest_common_order(N, M)
+    return lower_order(a, common_N) / lower_order(b, common_N)
 end
 
 function Base.:/(a::MTDev{N}, b::MTDev{N}) where {N}
-    # TODO
     @assert constant_term(b) != 0
     res = MTDev{N, promote_type(eltype(a), eltype(b))}()
     for ord in get_coeffs(res)
@@ -186,8 +191,8 @@ end
 =#
 
 # BASE FUNCTIONS
-function Base.sin(a::MTDev)
-    res = to_mtdev(sin(constant_term(a)), orders(a))
+function Base.sin(a::MTDev{N}) where {N}
+    res = to_mtdev(sin(constant_term(a)), N)
 
     remain = copy(a)
     remain.dev[1] = zero(eltype(remain))
@@ -202,8 +207,8 @@ function Base.sin(a::MTDev)
     return res
 end
 
-function Base.cos(a::MTDev)
-    res = to_mtdev(cos(constant_term(a)), orders(a))
+function Base.cos(a::MTDev{N}) where {N}
+    res = to_mtdev(cos(constant_term(a)), N)
 
     remain = copy(a)
     remain.dev[1] = zero(eltype(remain))
@@ -218,8 +223,8 @@ function Base.cos(a::MTDev)
     return res
 end
 
-function Base.sqrt(a::MTDev)
-    res = to_mtdev(sqrt(constant_term(a)), orders(a))
+function Base.sqrt(a::MTDev{N}) where {N}
+    res = to_mtdev(sqrt(constant_term(a)), N)
 
     remain = copy(a)
     remain.dev[1] = zero(eltype(remain))
