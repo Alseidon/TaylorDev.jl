@@ -65,6 +65,7 @@ function Base.:-(a::TDev)
     return TDev(-a.dev)
 end
 
+#=
 function Base.:*(a::TDev, b::TDev)
     mina = lowest_nonzero_order(a)
     minb = lowest_nonzero_order(b)
@@ -75,6 +76,34 @@ function Base.:*(a::TDev, b::TDev)
     end
     res = TDev(promote_type(eltype(a), eltype(b)), ord1)
     for o in (mina+minb):ord1#(mina+1):length(a.dev)
+        for i in max(mina, o-order(b)):min(order(a), o-minb)#(minb+1):(order(b)-i+2)
+            res.dev[o+1] += a.dev[i+1] * b.dev[o-i+1]
+        end
+    end
+    return res
+end
+=#
+
+function Base.:*(a::TDev{Na, Ta}, b::TDev{Nb, Tb}) where {Na, Ta, Nb, Tb}
+    if Nb < Na
+        return b*a
+    end
+    res = TDev(promote_type(Ta, Tb), Na)
+    mina = lowest_nonzero_order(a)
+    minb = lowest_nonzero_order(b)
+    for o in (mina+minb):Na
+        for i in max(mina, o-order(b)):min(order(a), o-minb)#(minb+1):(order(b)-i+2)
+            res.dev[o+1] += a.dev[i+1] * b.dev[o-i+1]
+        end
+    end
+    return res
+end
+
+function Base.:*(a::TDev{N, Ta}, b::TDev{N, Tb}) where {N, Ta, Tb}
+    res = TDev(promote_type(Ta, Tb), N-1)
+    mina = lowest_nonzero_order(a)
+    minb = lowest_nonzero_order(b)
+    for o in (mina+minb):N
         for i in max(mina, o-order(b)):min(order(a), o-minb)#(minb+1):(order(b)-i+2)
             res.dev[o+1] += a.dev[i+1] * b.dev[o-i+1]
         end
@@ -142,9 +171,12 @@ function Base.abs(a::TDev)
     return TDev(map(i->(i==1 ? abs(a.dev[1]) : a.dev[i]), 1:(order(a)+1)))
 end
 
-function Base.promote_rule(nb::Number, a::TDev)
+#= function Base.promote_rule(nb::Number, a::TDev)
     return (to_tdev(nb, order(a)), a)
-end
+end =#
+
+Base.promote_rule(a::Type{<:Number}, b::Type{TDev{N, T}}) where{N, T} =
+    TDev{N, promote_type(a, T)}
 
 function Base.sin(a::TDev)
     res = to_tdev(sin(constant_term(a)), order(a))
