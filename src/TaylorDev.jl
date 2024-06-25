@@ -10,6 +10,8 @@ include("core_multi.jl")
 include("functions_single.jl")
 include("functions_multi.jl")
 include("printing.jl")
+
+include("derivation.jl")
 include("integration.jl")
 
 using .TDevCore
