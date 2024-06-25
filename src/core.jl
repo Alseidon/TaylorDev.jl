@@ -12,4 +12,8 @@ end
 TDev(ord::Int) = TDev(zeros(ord + 1))
 TDev(t::DataType, ord::Int) = TDev(zeros(t, ord + 1))
 
+TDev{N, T}(x::Number) where {N, T} = TDev(
+    [(i==1 ? convert(T, x) : zero(T)) for i in 1:N]
+)
+
 end
